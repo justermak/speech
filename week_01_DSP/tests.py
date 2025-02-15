@@ -232,6 +232,9 @@ def test_mel_transform_base(testing_class, class_name):
 
             trans = testing_class(**kwargs)
             result = trans(mel)
+            
+            print(mel, result, target, sep='\n\n\n')
+            print('-' * 80)
 
             if result.shape != target.shape:
                 print(f"Shapes do not match target.shape={target.shape} != result.shape={result.shape}", file=sys.stderr)

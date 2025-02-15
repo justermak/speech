@@ -22,24 +22,21 @@ class Windowing:
         self.hop_length = hop_length if hop_length else self.window_size // 2
     
     def __call__(self, waveform):
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
-
-        return windows
+        windows = []
+        padded_waveform = np.pad(waveform, (self.window_size // 2, self.window_size))
+        for i in range(0, len(waveform) - self.window_size % 2 + 1, self.hop_length):
+            windows.append(padded_waveform[i:i + self.window_size])
+        
+        return np.array(windows)
     
 
 class Hann:
     def __init__(self, window_size=1024):
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
+        self.window = scipy.signal.windows.hann(window_size, sym=False)
 
     
     def __call__(self, windows):
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
+        return windows * self.window
 
 
 
@@ -48,10 +45,10 @@ class DFT:
         self.n_freqs = n_freqs
 
     def __call__(self, windows):
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
-
+        spec = np.fft.rfft(windows)
+        spec = np.abs(spec)
+        if self.n_freqs:
+            spec = spec[:, :self.n_freqs]
         return spec
 
 
@@ -62,22 +59,16 @@ class Square:
 
 class Mel:
     def __init__(self, n_fft, n_mels=80, sample_rate=22050):
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
-
+        self.mel = librosa.filters.mel(sr=sample_rate, n_fft=n_fft, n_mels=n_mels, fmin=1, fmax=8192).T
+        self.inv = np.linalg.pinv(self.mel)
 
     def __call__(self, spec):
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
+        mel = spec @ self.mel
 
         return mel
 
     def restore(self, mel):
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
+        spec = mel @ self.inv
 
         return spec
 
@@ -132,88 +123,81 @@ class Wav2Mel:
 
 class TimeReverse:
     def __call__(self, mel):
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
+        return mel[::-1]
 
 
 
 class Loudness:
     def __init__(self, loudness_factor):
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
+        self.loudness_factor = loudness_factor
 
 
     def __call__(self, mel):
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
+        return mel * self.loudness_factor
 
 
 
 
 class PitchUp:
     def __init__(self, num_mels_up):
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
+        self.num_mels_up = num_mels_up
 
 
     def __call__(self, mel):
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
+        return np.concatenate((np.zeros((mel.shape[0], self.num_mels_up)), mel[:, :-self.num_mels_up]), axis=1)
 
 
 
 class PitchDown:
     def __init__(self, num_mels_down):
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
+        self.num_mels_down = num_mels_down
 
 
     def __call__(self, mel):
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
+        return np.concatenate((mel[:, self.num_mels_down:], np.zeros((mel.shape[0], self.num_mels_down))), axis=1)
 
 
 
 class SpeedUpDown:
+    EPS = 1e-8
     def __init__(self, speed_up_factor=1.0):
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
-
+        self.speed_up_factor = speed_up_factor
+    
+    @staticmethod
+    def my_round(x, ln):
+        if x - int(x) < 0.5 - SpeedUpDown.EPS:
+            return int(x)
+        if x - int(x) > 0.5 + SpeedUpDown.EPS:
+            return int(x) + 1
+        if ln % 2 == 0:
+            return int(x)
+        return int(x) + 1
 
     def __call__(self, mel):
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
+        res = np.zeros((int(self.speed_up_factor * mel.shape[0]), mel.shape[1]))
+        sp = res.shape[0] / mel.shape[0]
+        for i in range(0, res.shape[0]):
+            res[i] = mel[SpeedUpDown.my_round(i / sp, res.shape[0])]
+        return res
 
 
 
 class FrequenciesSwap:
     def __call__(self, mel):
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
+        return mel[:, ::-1]
 
 
 
 class WeakFrequenciesRemoval:
     def __init__(self, quantile=0.05):
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
+        self.quantile = quantile
 
 
     def __call__(self, mel):
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
+        mel1 = mel.copy()
+        q = np.quantile(mel.ravel(), self.quantile)
+        mel1[mel1 < q] = 0
+        return mel1
 
 
 
