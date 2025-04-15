@@ -81,11 +81,13 @@ class SubDecoder(nn.Module):
         B, d = embedding.shape
         device = embedding.device
         assert B == 1, "Batch size should be 1"
-
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
-
+        
+        codes_sequence = torch.zeros((1, 1, self.n_codebooks), device=device, dtype=torch.long)
+        for i in range(self.n_codebooks):
+            logits = self.forward(embedding.unsqueeze(1), codes_sequence)
+            logits = logits[0, 0, i, :]
+            new_code = sampling_fn(logits)
+            codes_sequence[0, 0, i] = new_code
 
         return codes_sequence
 
@@ -272,10 +274,26 @@ class TTSTransformer(nn.Module):
         batch_size = phones.shape[0]
         assert batch_size == 1, "Batch size must be 1"
         device = phones.device
-
-        # Your code here
-        raise NotImplementedError("TODO: assignment")
-        # ^^^^^^^^^^^^^^
-
-
-        return codes
+        
+        speaker_embs = self.speaker_linear(speaker_embs)
+        
+        codes = torch.zeros((1, 1, self.subdecoder.n_codebooks), device=device, dtype=torch.long)
+        codes[0, 0, :] = start_token
+        for _ in range(max_size):
+            embeddings = self.encoder_decoder(
+                phones=phones,
+                phones_mask=torch.ones((1, phones.shape[1]), device=device, dtype=torch.bool),
+                codes=codes,
+                codes_mask=torch.ones((1, codes.shape[1]), device=device, dtype=torch.bool),
+                speaker_embs=speaker_embs,
+            )
+            prediction = self.subdecoder.autoregressive_sampling(
+                embedding=embeddings[:, -1, :],
+                sampling_fn=sampling_fn,
+            )
+            codes = torch.cat((codes, prediction), dim=1)
+            
+            if end_token in prediction[0, 0, :]:
+                break
+            
+        return codes[:, 1:, :]
