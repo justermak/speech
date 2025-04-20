@@ -129,3 +129,5 @@ dmypy.json
 .pyre/
 
 data/*
+week_08_tts_am_vocoders/checkpoints/*
+week_08_tts_am_vocoders/hifigan_ckpt/*
